@@ -78,6 +78,7 @@
     if (beg(b, "'"))return lisn("qt", paft(b, 1));
     if (beg(b, "`"))return lisn("qq", paft(b, 1));
     if (beg(b, ",@"))return lisn("uqs", paft(b, 2));
+    if (beg(b, "@"))return lisn("splice", paft(b, 1));
     if (beg(b, ","))return lisn("uq", paft(b, 1));
     if (beg(b, "~"))return lisn("cmpl", paft(b, 1));
     if (beg(b, "!"))return lisn("not", paft(b, 1));
