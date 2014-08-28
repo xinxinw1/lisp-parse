@@ -81,7 +81,7 @@
     if (beg(b, "@"))return lisn("splice", paft(b, 1));
     if (beg(b, ","))return lisn("uq", paft(b, 1));
     if (beg(b, "~"))return lisn("cmpl", paft(b, 1));
-    if (beg(b, "!"))return lisn("not", paft(b, 1));
+    //if (beg(b, "!"))return lisn("not", paft(b, 1));
     if (beg(b, ";"))return paft(b, len(mat(/^;[^\n\r]*/, b)));
     if ($.beg(b, /\s/))return paft(b, mat(/^\s+/, b).length);
     if (beg(b, ")", "]", "}"))return [b[0], 1];
