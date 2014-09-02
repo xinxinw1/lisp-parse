@@ -160,30 +160,22 @@
   
   function pobj(a){
     var r = psec(sli(a, 1), "}");
-    slen(r, glen(r)+1);
-    sres(r, cons("obj", gres(r)));
-    return r;
+    return ps(cons(sy("obj"), gres(r)), glen(r)+2);
   }
   
   function pnfn(a){
     var r = plissec(sli(a, 1), "]");
-    slen(r, glen(r)+1);
-    sres(r, lis("nfn", gres(r)));
-    return r;
+    return ps(lis(sy("nfn"), gres(r)), glen(r)+1);
   }
   
   function parr(a){
     var r = psec(sli(a, 2), "]");
-    slen(r, glen(r)+2);
-    sres(r, cons("arr", gres(r)));
-    return r;
+    return ps(cons(sy("arr"), gres(r)), glen(r)+2);
   }
   
   function pref(a){
     var r = psec(sli(a, 2), ")");
-    slen(r, glen(r)+2);
-    sres(r, cons("#", gres(r)));
-    return r;
+    return ps(cons(sy("#"), gres(r)), glen(r)+2);
   }
   
   function pbcom(a){
@@ -316,6 +308,13 @@
     }
     return ps(nrev(r), i);
   }
+  
+  /*function pqt(a){
+    var r = prs1(sli(a, 1));
+    if (whp(r))return ps(sy("qt"), 
+      return ps(lis(sy("qt"), gres(r)), glen(r)+1);*/
+    
+    
   
   /*function prs(a, pos){
     var l = pgrp(a, [], 0)[0];
