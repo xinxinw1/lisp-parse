@@ -62,12 +62,26 @@
     return {type: "wh", len: l};
   }
   
+  // end of file/string
+  function ef(){
+    return {type: "ef"};
+  }
+  
+  // ending bracket
+  function eb(b, l){
+    return {type: "eb", bra: b, len: l};
+  }
+  
   function gres(a){
     return a.res;
   }
   
   function glen(a){
     return a.len;
+  }
+  
+  function gbra(a){
+    return a.bra;
   }
   
   function sres(a, x){
@@ -86,6 +100,14 @@
     return isa("wh", a);
   }
   
+  function efp(a){
+    return isa("ef", a);
+  }
+  
+  function ebp(a){
+    return isa("eb", a);
+  }
+  
   ////// Parser //////
   
   // input: a js str of lisp code
@@ -100,7 +122,7 @@
   // output: a ps obj with res = a lisp obj, and len = length of data parsed
   //           or a wh obj with len = length of whitespace
   function prs1(a){
-    if (emp(a))return ps(nil(), 0);
+    if (emp(a))return ef();
     if (beg(a, "("))return plis(a);
     if (beg(a, "{"))return pobj(a);
     if (beg(a, "["))return pnfn(a);
@@ -118,9 +140,10 @@
     if (beg(a, "~"))return pcmpl(a);
     if (beg(a, ";"))return pcom(a);
     if (beg(a, /^\s/))return pwhi(a);
-    if (beg(a, ")", "]", "}"))err(prs1, "Extra end bracket in a = $1", a);
+    if (beg(a, ")", "]", "}"))return eb(a[0], 1);
     return psymnum(a);
   }
+  // err(prs1, "Extra end bracket in a = $1", a);
   
   function plis(a){
     var r = plissec(sli(a, 1));
@@ -134,7 +157,7 @@
   
   function gsymnum(a){
     for (var i = 0; i < len(a); i++){
-      if (has(/[\s(){}\[\]|"\/]/, a[i])){
+      if (has(/[\s(){}\[\]|";\/]/, a[i])){
         // for cases like "test(a b c)"
         return sli(a, 0, i);
       }
@@ -222,7 +245,7 @@
         s = false;
       }
     }
-    err(gbnd, "Bounds x = $1 not matched in a = $2", x, a);
+    err(gbnd, "Missing bound $1 in a = $2", x, a);
   }
   
   // input: a js str of a list without the first bracket
@@ -236,45 +259,55 @@
     var dot = false;
     var dotitem = false;
     while (true){
-      if (i >= a.length){
-        err(plissec, "Brackets $1 not matched in a = $2", end, a);
-      }
-      if (a[i] === end)break;
       c = prs1(sli(a, i));
-      if (!whp(c)){
-        if (dot !== false){
-          if (dotitem === false){
-            // dot before this item and no item between dot and curr
-            dotitem = gres(c);
+      switch (typ(c)){
+        case "ps":
+          if (dot !== false){
+            if (dotitem === false){
+              // dot before this item and no item between dot and curr
+              dotitem = gres(c);
+            } else {
+              // two items after dot == not lisd
+              r = cons(dot, r); // add dot
+              r = cons(dotitem, r); // add item btw dot and curr
+              r = cons(gres(c), r); // add curr item
+              dot = false;
+              dotitem === false;
+            }
+          } else if (!nilp(r) && is(gres(c), sy(".")) && !c.bsym){
+            // !nilp(r) == dot is not first in the list (. a)
+            dot = gres(c);
           } else {
-            // two items after dot == not lisd
-            r = cons(dot, r); // add dot
-            r = cons(dotitem, r); // add item btw dot and curr
-            r = cons(gres(c), r); // add curr item
-            dot = false;
-            dotitem === false;
+            // not currently after a dot and c is not a dot
+            r = cons(gres(c), r);
           }
-        } else if (!nilp(r) && is(gres(c), sy(".")) && !c.bsym){
-          // !nilp(r) == dot is not first in the list (. a)
-          dot = gres(c);
-        } else {
-          // not currently after a dot and c is not a dot
-          r = cons(gres(c), r);
-        }
+          i += glen(c);
+          break;
+        case "wh":
+          i += glen(c);
+          break;
+        case "eb":
+          if (gbra(c) === end){
+            if (dot !== false){
+              if (dotitem !== false){
+                // one item after dot
+                return ps(nrev(r, dotitem), i+1); // i+1 to include the ending )
+              }
+              // no items after dot
+              r = cons(dot, r);
+              return ps(nrev(r), i+1);
+            }
+            // no dots or more than one item after dot
+            return ps(nrev(r), i+1);
+          }
+          err(plissec, "Mismatched bracket $1 in a = $2", gbra(c), a);
+        case "ef":
+          err(plissec, "Missing bracket $1 in a = $2", end, a);
+        default:
+          err(plissec, "Unknown c = $1 in a = $2", c, a);
       }
-      i += glen(c);
     }
-    if (dot !== false){
-      if (dotitem !== false){
-        // one item after dot
-        return ps(nrev(r, dotitem), i+1); // i+1 to include the ending )
-      }
-      // no items after dot
-      r = cons(dot, r);
-      return ps(nrev(r), i+1);
-    }
-    // no dots or more than one item after dot
-    return ps(nrev(r), i+1);
+    err(plissec, "Something strange happened a = $1", a);
   }
   
   // no dot version of plissec
@@ -284,16 +317,26 @@
     var i = 0;
     var c; // curr
     while (true){
-      if (i >= a.length){
-        err(psec, "Brackets $1 not matched in a = $2", end, a);
-      }
-      if (a[i] === end)break;
       c = prs1(sli(a, i));
-      if (!whp(c))r = cons(gres(c), r);
-      i += glen(c);
+      switch (typ(c)){
+        case "ps":
+          r = cons(gres(c), r);
+          i += glen(c);
+          break;
+        case "wh":
+          i += glen(c);
+          break;
+        case "eb":
+          // i+1 to include the ending )
+          if (gbra(c) === end)return ps(nrev(r), i+1);
+          err(psec, "Mismatched bracket $1 in a = $2", gbra(c), a);
+        case "ef":
+          err(psec, "Missing bracket $1 in a = $2", end, a);
+        default:
+          err(psec, "Unknown c = $1 in a = $2", c, a);
+      }
     }
-    // i+1 to include the ending )
-    return ps(nrev(r), i+1);
+    err(psec, "Something strange happened a = $1", a);
   }
   
   // parse to end of file
@@ -301,191 +344,67 @@
     var r = nil();
     var i = 0;
     var c; // curr
-    while (i < a.length){
+    while (true){
       c = prs1(sli(a, i));
-      if (!whp(c))r = cons(gres(c), r);
-      i += glen(c);
+      switch (typ(c)){
+        case "ps":
+          r = cons(gres(c), r);
+          i += glen(c);
+          break;
+        case "wh":
+          i += glen(c);
+          break;
+        case "eb":
+          err(psecn, "Extra end bracket $1 in a = $2", gbra(c), a);
+        case "ef":
+          return ps(nrev(r), i);
+        default:
+          err(psecn, "Unknown c = $1 in a = $2", c, a);
+      }
     }
-    return ps(nrev(r), i);
+    err(psecn, "Something strange happened a = $1", a);
   }
   
   /*function pqt(a){
     var r = prs1(sli(a, 1));
     if (whp(r))return ps(sy("qt"), 
       return ps(lis(sy("qt"), gres(r)), glen(r)+1);*/
-    
-    
-  
-  /*function prs(a, pos){
-    var l = pgrp(a, [], 0)[0];
-    if (nilp(cdr(l)))return car(l);
-    return cons("do", l);
-  }
-  
-  function prs1(a, pos){
-    var b = sli(a, pos);
-    if (beg(b, "{"))return conn("obj", pafg(b, "}", 1));
-    if (beg(b, "("))return plis(b);
-    if (beg(b, "["))return lisn("nfn", pafg(b, "]", 1));
-    if (beg(b, "\""))return pstr(b);
-    if (beg(b, "|"))return psym(b);
-    if (beg(b, "#|"))return paft(b, len(gcom(b)));
-    if (beg(b, "#\""))return prgx(b);
-    if (beg(b, "#["))return conn("arr", pafg(b, "]", 2));
-    if (beg(b, "#("))return conn("#", pafg(b, ")", 2));
-    if (beg(b, "'"))return lisn("qt", paft(b, 1));
-    if (beg(b, "`"))return lisn("qq", paft(b, 1));
-    if (beg(b, ",@"))return lisn("uqs", paft(b, 2));
-    if (beg(b, "@"))return lisn("splice", paft(b, 1));
-    if (beg(b, ","))return lisn("uq", paft(b, 1));
-    if (beg(b, "~"))return lisn("cmpl", paft(b, 1));
-    //if (beg(b, "!"))return lisn("not", paft(b, 1));*/
-    ////if (beg(b, ";"))return paft(b, len(mat(/^;[^\n\r]*/, b)));
-    ////if ($.beg(b, /\s/))return paft(b, mat(/^\s+/, b).length);
-    ////if (beg(b, ")", "]", "}"))return [b[0], 1];
-    ////var s = mat(/^[^(){}"\[\]\s]*/, b);
-    /*if (beg(s, "#") && s !== "#"){
-      return lisn("qgs", [sli(s, 1), len(s)]);
-    }
-    if (is(s, "."))return [lis("dot"), 1];
-    //if (is(s, "."))return [".", 1];
-    if (has(".", s) && !nump(s)){
-      if (end(s, "."))return obj(s);
-      if (beg(s, "."))return [cons("dtfn", spl(sli(s, 1), ".")), len(s)];
-      return [cons(".", spl(s, ".")), len(s)];
-    }
-    return obj(s);
-  }
-  
-  // (var [o l] (prs1 a pos))
-  function paft(a, n){
-    return alen(n, prs1(a, n));
-  }
-  
-  function pafg(a, end, n){
-    return alen(n, pgrp(a, end, n));
-  }
-  
-  function lisn(x, a){
-    return [lis(x, a[0]), a[1]];
-  }
-  
-  function conn(x, a){
-    return [cons(x, a[0]), a[1]];
-  }
-  
-  function obj(a){
-    return [a, a.length];
-  }
-  
-  function alen(n, a){
-    return [a[0], a[1]+n];
-  }
-  
-  function pgrp(a, end, pos){
-    var r = prs1(a, pos);
-    if (nilp(end)){
-      if (r[0] === "")return [[], r[1]];
-    } else {
-      if (r[0] === "")err(pgrp, "Missing $1", end);
-      if (synp(r[0])){
-        var p = $.pos(end, r[0]);
-        if (p != -1){
-          if (p == 0)return [[], r[1]-len(r[0])+p+len(end)];
-          return [lis(sli(r[0], 0, p)), r[1]-len(r[0])+p+len(end)];
-        }
-      }
-    }
-    var o = pgrp(a, end, pos+r[1]);
-    return [cons(r[0], o[0]), r[1]+o[1]];
-  }
-  
-  function plis(a){
-    return alen(1, plgrp(a, 1));
-  }
-  
-  function plgrp(a, pos){
-    var end = ")";
-    var r = prs1(a, pos);
-    if (r[0] === "")err(plgrp, "Missing $1", end);
-    if (synp(r[0])){
-      var p = $.pos(end, r[0]);
-      if (p != -1){
-        if (p == 0)return [[], r[1]-r[0].length+p+end.length];
-        return [lis(sli(r[0], 0, p)), r[1]-r[0].length+p+end.length];
-      }
-    }
-    var o = plgrp(a, pos+r[1]);
-    if (iso(r[0], lis("dot")) && a[pos-1] != "("){
-    //if (r[0] == "." && a[pos-1] != "("){
-      if (nilp(o[0]))err(plgrp, "Missing object after \".\" in a = $1", a);
-      if (!nilp(cdr(o[0])))err(plgrp, "More than one object after \".\" in a = $1", a);
-      return [car(o[0]), r[1]+o[1]];
-    }
-    return [cons(r[0], o[0]), r[1]+o[1]];
-  }
-  
-  function pstr(a){
-    var r = gstr(a);
-    return [s(JSON.parse(r)), len(r)];
-  }
-  
-  function gstr(a){
-    return gbnd(a, "\"");
-  }
-  
-  function psym(a){
-    var r = gbnd(a, "|");
-    return [mid(r), len(r)];
-  }
-  
-  function gbnd(a, x){
-    var s = false; // slashes
-    for (var i = 1; i < len(a); i++){
-      if (a[i] == "\\")s = !s;
-      else {
-        if (a[i] == x && !s){
-          return sli(a, 0, i+1);
-        }
-        s = false;
-      }
-    }
-    err(gbnd, "Bounds x = $1 not matched in a = $2", x, a);
-  }
-  
-  function gcom(a){
-    for (var i = 2; i < a.length; i++){
-      if (a[i] == "#" && a[i-1] == "|"){
-        return sli(a, 0, i+1);
-      }
-    }
-    err(gcom, "Block comment not matched in a = $1", a);
-  }
-  
-  function prgx(a){
-    var r = gstr(sli(a, 1));
-    var s = rpl("\\\"", "\"", mid(r));
-    return [new RegExp(s, "g"), len(r)+1];
-  }*/
   
   ////// Object exposure //////
   
   att({
     ps: ps,
     wh: wh,
+    ef: ef,
+    eb: eb,
+    
     gres: gres,
     glen: glen,
+    gbra: gbra,
+    
     sres: sres,
     slen: slen,
+    
     psp: psp,
     whp: whp,
+    efp: efp,
+    ebp: ebp,
     
     prs: prs,
     prs1: prs1,
     plis: plis,
     pwhi: pwhi,
     gsymnum: gsymnum,
-    psymnum: psymnum,
+    pcom: pcom,
+    pobj: pobj,
+    pnfn: pnfn,
+    parr: parr,
+    pref: pref,
+    pbcom: pbcom,
+    prgx: prgx,
+    pbsym: pbsym,
+    pstr: pstr,
+    gbnd: gbnd,
     plissec: plissec,
     psec: psec,
     psecn: psecn
