@@ -193,7 +193,7 @@
   
   function pobj(a){
     var r = psec(sli(a, 1), "}");
-    return ps(cons(sy("obj"), gres(r)), glen(r)+2);
+    return ps(cons(sy("obj"), gres(r)), glen(r)+1);
   }
   
   function pnfn(a){
