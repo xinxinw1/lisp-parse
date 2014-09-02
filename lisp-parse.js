@@ -9,7 +9,6 @@
   var udfp = $.udfp;
   //var is = $.is;
   var has = $.has;
-  var pos = $.pos;
   var rpl = $.rpl;
   var len = $.len;
   var sli = $.sli;
@@ -47,6 +46,8 @@
   var rx = L.rx;
   
   var isa = L.isa;
+  
+  var spl = L.spl;
   
   ////// Types //////
   
@@ -115,12 +116,14 @@
   function prs(a){
     var l = gres(psecn(a));
     if (nilp(cdr(l)))return car(l);
-    return cons("do", l);
+    return cons(sy("do"), l);
   }
   
+  // parse the first object in a
   // input: a js str of lisp code
   // output: a ps obj with res = a lisp obj, and len = length of data parsed
   //           or a wh obj with len = length of whitespace
+  //           or a ef obj (end of file) or an eb obj (end bracket)
   function prs1(a){
     if (emp(a))return ef();
     if (beg(a, "("))return plis(a);
@@ -175,6 +178,12 @@
     var r = gsymnum(a);
     if (r === "")err(psymnum, "Unknown item a = $1", a);
     if (has(/^-?[0-9]+(\.[0-9]+)?$/, a))return ps(nu(r), r.length);
+    if (has(".", r) && !end(r, ".")){
+      if (beg(r, ".")){
+        return ps(cons(sy("dtfn"), spl(sy(sli(r, 1)), sy("."))), r.length);
+      }
+      return ps(cons(sy("."), spl(sy(r), sy("."))), r.length);
+    }
     return ps(sy(r), r.length);
   }
   
