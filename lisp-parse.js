@@ -137,6 +137,7 @@
     if (beg(a, ",@"))return puqs(a);
     if (beg(a, ","))return puq(a);
     if (beg(a, "@"))return pspi(a); // splice
+    if (beg(a, "#"))return pqgs(a);
     if (beg(a, "~"))return pcmpl(a);
     if (beg(a, ";"))return pcom(a);
     if (beg(a, /^\s/))return pwhi(a);
@@ -365,10 +366,41 @@
     err(psecn, "Something strange happened a = $1", a);
   }
   
-  /*function pqt(a){
+  function pqt(a){
     var r = prs1(sli(a, 1));
-    if (whp(r))return ps(sy("qt"), 
-      return ps(lis(sy("qt"), gres(r)), glen(r)+1);*/
+    if (psp(r))return ps(lis(sy("qt"), gres(r)), glen(r)+1);
+    return ps(sy("'"), 1);
+  }
+  
+  function pqq(a){
+    var r = prs1(sli(a, 1));
+    if (psp(r))return ps(lis(sy("qq"), gres(r)), glen(r)+1);
+    return ps(sy("`"), 1);
+  }
+  
+  function puq(a){
+    var r = prs1(sli(a, 1));
+    if (psp(r))return ps(lis(sy("uq"), gres(r)), glen(r)+1);
+    return ps(sy(","), 1);
+  }
+  
+  function puqs(a){
+    var r = prs1(sli(a, 2));
+    if (psp(r))return ps(lis(sy("uqs"), gres(r)), glen(r)+2);
+    return ps(sy(",@"), 2);
+  }
+  
+  function pspi(a){
+    var r = prs1(sli(a, 1));
+    if (psp(r))return ps(lis(sy("splice"), gres(r)), glen(r)+1);
+    return ps(sy("@"), 1);
+  }
+  
+  function pqgs(a){
+    var r = prs1(sli(a, 1));
+    if (psp(r))return ps(lis(sy("qgs"), gres(r)), glen(r)+1);
+    return ps(sy("#"), 1);
+  }
   
   ////// Object exposure //////
   
