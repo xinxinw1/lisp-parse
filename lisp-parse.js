@@ -111,6 +111,10 @@
   
   ////// Parser //////
   
+  // L.dsj(L.prs($.get("../lisp-cmpr/lib/lisp-core.lisp")))
+  // L.dsj(L.prs($.get("../lisp-cmpr/lib/lisp-cmp-core.lisp")))
+  // L.dsj(L.prs($.get("../lisp-cmpr/lib/lisp-compile-basic.lisp")))
+  
   // input: a js str of lisp code
   // output: a lisp obj representing that code
   function prs(a){
@@ -129,12 +133,12 @@
     if (beg(a, "("))return plis(a);
     if (beg(a, "{"))return pobj(a);
     if (beg(a, "["))return pnfn(a);
-    if (beg(a, "/"))return prgx(a);
     if (beg(a, "\""))return pstr(a);
     if (beg(a, "|"))return pbsym(a);
     if (beg(a, "#|"))return pbcom(a);
     if (beg(a, "#["))return parr(a);
     if (beg(a, "#("))return pref(a);
+    if (beg(a, "#\""))return prgx(a);
     if (beg(a, "'"))return pqt(a);
     if (beg(a, "`"))return pqq(a);
     if (beg(a, ",@"))return puqs(a);
@@ -161,11 +165,12 @@
   
   function gsymnum(a){
     for (var i = 0; i < len(a); i++){
-      if (has(/[\s(){}\[\]|";\/]/, a[i])){
+      if (has(/[\s(){}\[\]|";]/, a[i])){
         // for cases like "test(a b c)"
         return sli(a, 0, i);
       }
-      if (a[i] === "#" && i+1 !== a.length && inp(a[i+1], "|", "[", "(", "{")){
+      if (a[i] === "#" && i+1 !== a.length &&
+          inp(a[i+1], "|", "[", "(", "{", "\"")){
         // for cases like "test#|hey|#"
         return sli(a, 0, i);
       }
@@ -220,15 +225,17 @@
     err(pbcom, "Block comment not matched in a = $1", a);
   }
   
+  // change this to #"test" since / is used for division
   function prgx(a){
-    var r = gbnd(a, "/");
-    var aft = prs1(sli(a, r.length));
+    var r = gbnd(sli(a, 1), "\"");
+    var s = rpl("\\\"", "\"", mid(r));
+    var aft = prs1(sli(a, len(r)+1)); // len(r)+1 to include the # at the start
     if (psp(aft) && symp(gres(aft)) && !nilp(gres(aft))){
       var f = dat(gres(aft));
       if (!has("g", f))f += "g";
-      return ps(rx(new RegExp(mid(r), f)), len(r)+glen(aft));
+      return ps(rx(new RegExp(s, f)), len(r)+1+glen(aft));
     }
-    return ps(rx(new RegExp(mid(r), "g")), len(r));
+    return ps(rx(new RegExp(s, "g")), len(r)+1);
   }
   
   function pbsym(a){
