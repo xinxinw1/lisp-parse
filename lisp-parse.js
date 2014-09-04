@@ -182,7 +182,7 @@
   function psymnum(a){
     var r = gsymnum(a);
     if (r === "")err(psymnum, "Unknown item a = $1", a);
-    if (has(/^-?[0-9]+(\.[0-9]+)?$/, a))return ps(nu(r), r.length);
+    if (has(/^-?[0-9]+(\.[0-9]+)?$/, r))return ps(nu(r), r.length);
     if (has(".", r) && !end(r, ".")){
       if (beg(r, ".")){
         return ps(cons(sy("dtfn"), spl(sy(sli(r, 1)), sy("."))), r.length);
