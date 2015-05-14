@@ -203,7 +203,7 @@
   
   function pnfn(a){
     var r = plissec(sli(a, 1), "]");
-    return ps(lis(sy("nfn"), gres(r)), glen(r)+1);
+    return ps(lis(sy("fn1"), gres(r)), glen(r)+1);
   }
   
   function parr(a){
