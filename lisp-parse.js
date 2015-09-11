@@ -1,4 +1,4 @@
-/***** Lisp Parser Devel *****/
+/***** Lisp Parser 0.1 *****/
 
 /* require tools >= 3.1 */
 /* require lisp-tools */
