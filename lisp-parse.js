@@ -73,6 +73,7 @@
     return {type: "eb", bra: b, len: l};
   }
   
+  // get result
   function gres(a){
     return a.res;
   }
