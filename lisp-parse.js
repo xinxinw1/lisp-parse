@@ -421,7 +421,7 @@
   
   ////// Object exposure //////
   
-  att({
+  att(L, {
     ps: ps,
     wh: wh,
     ef: ef,
@@ -457,7 +457,7 @@
     plissec: plissec,
     psec: psec,
     psecn: psecn
-  }, L);
+  });
   
   ////// Testing //////
   
